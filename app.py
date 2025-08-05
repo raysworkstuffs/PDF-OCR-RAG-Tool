@@ -83,7 +83,7 @@ def main():
             splits = text_splitter.split_text(all_pdf_text)
 
             embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
-            vectordb = FAISS.from_texts(splits, embeddings)
+            vectordb = Chroma.from_texts(splits, embeddings)
 
             llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0, openai_api_key=openai_api_key)
             st.session_state.qa_chain = RetrievalQA.from_chain_type(
