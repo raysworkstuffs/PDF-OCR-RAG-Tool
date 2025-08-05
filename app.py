@@ -40,7 +40,10 @@ def count_tokens(text: str) -> int:
 
 def main():
     """Orchestrates the script's execution with a Streamlit GUI."""
-    openai_api_key = os.getenv("OPENAI_API_KEY")
+    OPENAI_KEY = st.secrets['OPENAI_API_KEY']
+    # Some other code here are omitted for brevity
+    client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+    # Start the Streamlit app and expose it via LocalTunnel
     openai.api_key = openai_api_key
 
     st.title("PDF OCR & Summarize & RAG")
