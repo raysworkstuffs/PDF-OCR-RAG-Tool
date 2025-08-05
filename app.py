@@ -14,7 +14,6 @@ from langchain_openai import ChatOpenAI
 import streamlit as st
 import tiktoken
 
-pip install -u langchain-community langchain-openai pdf2image pytesseract Pillow streamlit tiktoken chromadb
 
 def pdf_to_img(pdf_file):
     """Converts a PDF file to a list of PIL Images."""

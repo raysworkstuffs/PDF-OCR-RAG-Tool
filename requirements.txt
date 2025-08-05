@@ -10,3 +10,4 @@ tiktoken
 graphviz
 langchain_openai
 chromadb
+langchain-community
