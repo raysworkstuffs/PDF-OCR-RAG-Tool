@@ -121,22 +121,18 @@ def main():
                     st.markdown(response)
                 st.session_state.messages.append({"role": "assistant", "content": response})
 
-import streamlit as st
-
 def check_password():
-    def password_entered():
-        if st.session_state["password"] == st.secrets["APP_PASSWORD"]:
-            st.session_state["password_correct"] = True
-            del st.session_state["password"]  # Don't store password
-        else:
-            st.session_state["password_correct"] = False
-
     if "password_correct" not in st.session_state:
-        st.text_input("Password", type="password", on_change=password_entered, key="password")
-        return False
-    elif not st.session_state["password_correct"]:
-        st.text_input("Password", type="password", on_change=password_entered, key="password")
-        st.error("😕 Password incorrect")
+        st.session_state["password_correct"] = False
+
+    if not st.session_state["password_correct"]:
+        password = st.text_input("Password", type="password")
+        if password:
+            if password == st.secrets["APP_PASSWORD"]:
+                st.session_state["password_correct"] = True
+                st.experimental_rerun()
+            else:
+                st.error("😕 Password incorrect")
         return False
     else:
         return True
