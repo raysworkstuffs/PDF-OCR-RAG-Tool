@@ -68,6 +68,7 @@ def main():
                 file_path = os.path.abspath(uploaded_file.name)
                 with open(file_path, "wb") as f:
                      f.write(uploaded_file.getbuffer())
+                print("Processing file:", file_path)
                 pdf_text = extract_text_from_pdf(file_path)
                 all_pdf_text += pdf_text
                 st.success(f"Successfully extracted text from '{uploaded_file.name}'.")
