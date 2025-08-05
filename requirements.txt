@@ -1,2 +1,11 @@
-graphviz==0.21
 streamlit==1.47.1
+openai
+pdf2image
+Image
+pytesseract
+langchain
+langchain-openai
+faiss-cpu
+tiktoken
+graphviz
+langchain_openai
