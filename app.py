@@ -12,7 +12,6 @@ from langchain.vectorstores import Chroma
 from langchain.chains import RetrievalQA
 from langchain_openai import ChatOpenAI
 import streamlit as st
-import tiktoken
 
 def pdf_to_img(pdf_file):
     """Converts a PDF file to a list of PIL Images."""
@@ -39,15 +38,9 @@ def count_tokens(text: str) -> int:
     return len(encoding.encode(text))
 
 def main():
-    """Orchestrates the script's execution with a Streamlit GUI."""
-    OPENAI_KEY = st.secrets['OPENAI_API_KEY']
-    # Remove or comment out the next line
-    # client = OpenAI(api_key=os.getenv('OPENAI_API_KEY')) < this line is not needed as we are using openai package directly
-    # Set the OpenAI API key for the openai package
-    openai.api_key = OPENAI_KEY
-
-    embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_KEY)
-    llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0, openai_api_key=OPENAI_KEY)
+    openai_api_key = st.secrets["OPENAI_API_KEY"]
+    embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+    llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0, openai_api_key=openai_api_key)
 
     st.title("PDF OCR & Summarize & RAG")
 
