@@ -65,9 +65,10 @@ def main():
         all_pdf_text = ""
         for uploaded_file in uploaded_files:
             try:
-                with open(uploaded_file.name, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
-                pdf_text = extract_text_from_pdf(uploaded_file.name)
+                file_path = os.path.abspath(uploaded_file.name)
+                with open(file_path, "wb") as f:
+                     f.write(uploaded_file.getbuffer())
+                pdf_text = extract_text_from_pdf(file_path)
                 all_pdf_text += pdf_text
                 st.success(f"Successfully extracted text from '{uploaded_file.name}'.")
             except Exception as e:
