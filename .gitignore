@@ -206,6 +206,12 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+# Streamlit
+.streamlit/secrets.toml.streamlit/secrets.toml
+/workspaces/PDF-OCR-RAG-Tool/.streamlit/secrets.toml
+.streamlit/secrets.toml
+/workspaces/PDF-OCR-RAG-Tool/.streamlit/secrets.toml
+
 # Byte-compiled / optimized / DLL files
   __pycache__/
   *.py[cod]
