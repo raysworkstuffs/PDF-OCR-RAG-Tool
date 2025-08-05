@@ -230,4 +230,6 @@ __marimo__/
 
   # Streamlit
   .streamlit/secrets.toml.streamlit/secrets.toml
+/workspaces/PDF-OCR-RAG-Tool/.streamlit/secrets.toml
 .streamlit/secrets.toml
+/workspaces/PDF-OCR-RAG-Tool/.streamlit/secrets.toml
