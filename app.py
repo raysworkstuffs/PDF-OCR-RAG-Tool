@@ -1,0 +1,123 @@
+import os
+import openai
+import pdf2image
+try:
+    from PIL import Image
+except ImportError:
+    import Image
+import pytesseract
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_openai import OpenAIEmbeddings
+from langchain.vectorstores import FAISS
+from langchain.chains import RetrievalQA
+from langchain_openai import ChatOpenAI
+import streamlit as st
+import tiktoken
+
+def pdf_to_img(pdf_file):
+    """Converts a PDF file to a list of PIL Images."""
+    return pdf2image.convert_from_path(pdf_file)
+
+
+def ocr_core(file):
+    """Performs OCR on a single image and returns the extracted text."""
+    return pytesseract.image_to_string(file)
+
+
+def extract_text_from_pdf(pdf_file):
+    """Extracts text from all pages of a PDF file."""
+    images = pdf_to_img(pdf_file)
+    extracted_text = ""
+    for img in images:
+        extracted_text += ocr_core(img) + "\n\n"
+    return extracted_text
+
+
+def count_tokens(text: str) -> int:
+    """Counts the number of tokens in a string."""
+    encoding = tiktoken.get_encoding("cl100k_base")
+    return len(encoding.encode(text))
+
+def main():
+    """Orchestrates the script's execution with a Streamlit GUI."""
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    openai.api_key = openai_api_key
+
+    st.title("PDF OCR & Summarize & RAG")
+
+    with st.expander("IMPORTANT NOTICE"):
+        st.write("""
+        This web application is a prototype developed for educational purposes only. The information provided here is NOT intended for real-world usage and should not be relied upon for making any decisions, especially those related to financial, legal, or healthcare matters.
+
+        Furthermore, please be aware that the LLM may generate inaccurate or incorrect information. You assume full responsibility for how you use any generated output.
+
+        Always consult with qualified professionals for accurate and personalized advice.
+        """)
+
+    uploaded_files = st.file_uploader(
+        "Upload PDF files", type="pdf", accept_multiple_files=True
+    )
+
+    if "qa_chain" not in st.session_state:
+        st.session_state.qa_chain = None
+
+    if uploaded_files:
+        all_pdf_text = ""
+        for uploaded_file in uploaded_files:
+            try:
+                with open(uploaded_file.name, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+                pdf_text = extract_text_from_pdf(uploaded_file.name)
+                all_pdf_text += pdf_text
+                st.success(f"Successfully extracted text from '{uploaded_file.name}'.")
+            except Exception as e:
+                st.error(f"An error occurred while processing '{uploaded_file.name}': {e}")
+
+        if all_pdf_text:
+            st.subheader("Extracted Text")
+            st.text_area("Full text from PDF(s)", all_pdf_text, height=300)
+
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=1000, chunk_overlap=200
+            )
+            splits = text_splitter.split_text(all_pdf_text)
+
+            embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+            vectordb = FAISS.from_texts(splits, embeddings)
+
+            llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0, openai_api_key=openai_api_key)
+            st.session_state.qa_chain = RetrievalQA.from_chain_type(
+                llm, retriever=vectordb.as_retriever()
+            )
+            query = "Summarize the content of the PDF(s)."
+            summary = st.session_state.qa_chain.run(query)
+            st.write("---")
+            st.subheader("Summary")
+            st.write(summary)
+            st.write("---")
+            st.write(f"Token count: {count_tokens(all_pdf_text)}")
+
+    if st.session_state.qa_chain:
+        st.subheader("Chat with your Documents (RAG)")
+        st.write("Ask questions about the uploaded documents. Type 'exit' to stop.")
+
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
+
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
+        if prompt := st.chat_input("Ask a question:"):
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.markdown(prompt)
+
+            if prompt.lower() != "exit":
+                with st.chat_message("assistant"):
+                    response = st.session_state.qa_chain.run(prompt)
+                    st.markdown(response)
+                st.session_state.messages.append({"role": "assistant", "content": response})
+
+if __name__ == "__main__":
+    main()
