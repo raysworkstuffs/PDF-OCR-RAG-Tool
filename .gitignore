@@ -229,4 +229,4 @@ __marimo__/
   .idea/
 
   # Streamlit
-  .streamlit/secrets.toml
+  .streamlit/secrets.toml.streamlit/secrets.toml
