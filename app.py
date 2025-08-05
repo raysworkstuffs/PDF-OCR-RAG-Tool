@@ -130,7 +130,7 @@ def check_password():
         if password:
             if password == st.secrets["APP_PASSWORD"]:
                 st.session_state["password_correct"] = True
-                st.experimental_rerun()
+                st.success("Password correct. Please reload the page or interact with the app.")
             else:
                 st.error("😕 Password incorrect")
         return False
@@ -138,5 +138,4 @@ def check_password():
         return True
 
 if check_password():
-    # ...rest of your Streamlit app...
-    st.write("Welcome to Ray's app!")
+    main()
