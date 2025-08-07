@@ -6,6 +6,7 @@ try:
 except ImportError:
     import Image
 import pytesseract
+import requests
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
@@ -13,15 +14,58 @@ from langchain.chains import RetrievalQA
 from langchain_openai import ChatOpenAI
 import streamlit as st
 import tiktoken
+import fitz  # PyMuPDF
+
 
 def pdf_to_img(pdf_file):
-    """Converts a PDF file to a list of PIL Images."""
-    return pdf2image.convert_from_path(pdf_file, poppler_path='/usr/bin')
+    """Converts a PDF file to a list of PIL Images using PyMuPDF."""
+    import io
+    from PIL import Image
+
+    images = []
+    # If pdf_file is a path, open it directly; if it's a file-like object, use bytes
+    if isinstance(pdf_file, str):
+        doc = fitz.open(pdf_file)
+    else:
+        doc = fitz.open(stream=pdf_file.read(), filetype="pdf")
+    for page in doc:
+        pix = page.get_pixmap()
+        img_bytes = pix.tobytes("png")
+        img = Image.open(io.BytesIO(img_bytes))
+        images.append(img)
+    return images
+
 
 
 def ocr_core(file):
-    """Performs OCR on a single image and returns the extracted text."""
-    return pytesseract.image_to_string(file)
+    """Performs OCR on a single image and returns the extracted text using Tesseract or OCR API."""
+    # Try Tesseract first
+    try:
+        return pytesseract.image_to_string(file)
+    except Exception as e:
+        st.warning("Tesseract not available, using OCR API instead.")
+        return ocr_space_image(file)
+
+
+def ocr_space_image(image):
+    """Performs OCR using the OCR.Space API."""
+    api_key = st.secrets["OCR_API_KEY"]
+    url = 'https://api.ocr.space/parse/image'
+    # Convert PIL Image to bytes
+    import io
+    buffered = io.BytesIO()
+    image.save(buffered, format="PNG")
+    buffered.seek(0)
+    files = {'file': buffered}
+    data = {'isOverlayRequired': False, 'OCREngine': 2}
+    headers = {'apikey': api_key}
+    response = requests.post(url, files=files, data=data, headers=headers)
+    result = response.json()
+    try:
+        return result['ParsedResults'][0]['ParsedText']
+    except Exception:
+        return ""
+
 
 
 def extract_text_from_pdf(pdf_file):
@@ -39,15 +83,10 @@ def count_tokens(text: str) -> int:
     return len(encoding.encode(text))
 
 def main():
-    """Orchestrates the script's execution with a Streamlit GUI."""
-    OPENAI_KEY = st.secrets['OPENAI_API_KEY']
-    # Remove or comment out the next line
-    # client = OpenAI(api_key=os.getenv('OPENAI_API_KEY')) < this line is not needed as we are using openai package directly
-    # Set the OpenAI API key for the openai package
-    openai.api_key = OPENAI_KEY
+    openai_api_key = st.secrets["OPENAI_API_KEY"]
+    embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+    llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0, openai_api_key=openai_api_key)
 
-    embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_KEY)
-    llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0, openai_api_key=OPENAI_KEY)
 
     st.title("PDF OCR & Summarize & RAG")
 
@@ -75,7 +114,8 @@ def main():
                 with open(file_path, "wb") as f:
                      f.write(uploaded_file.getbuffer())
                 print("Processing file:", file_path)
-                pdf_text = extract_text_from_pdf(file_path)
+                uploaded_file.seek(0)
+                pdf_text = extract_text_from_pdf(uploaded_file)
                 all_pdf_text += pdf_text
                 st.success(f"Successfully extracted text from '{uploaded_file.name}'.")
             except Exception as e:
@@ -127,5 +167,21 @@ def main():
                     st.markdown(response)
                 st.session_state.messages.append({"role": "assistant", "content": response})
 
-if __name__ == "__main__":
+def check_password():
+    if "password_correct" not in st.session_state:
+        st.session_state["password_correct"] = False
+
+    if not st.session_state["password_correct"]:
+        password = st.text_input("Password", type="password")
+        if password:
+            if password == st.secrets["APP_PASSWORD"]:
+                st.session_state["password_correct"] = True
+                st.success("Password correct. Please reload the page or interact with the app.")
+            else:
+                st.error("😕 Password incorrect")
+        return False
+    else:
+        return True
+
+if check_password():
     main()
