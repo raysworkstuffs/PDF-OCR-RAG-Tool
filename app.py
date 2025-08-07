@@ -130,6 +130,10 @@ def main():
             )
             splits = text_splitter.split_text(all_pdf_text)
 
+            if not splits or all(s.strip() == "" for s in splits):
+                st.error("No text was extracted from the uploaded PDFs. Please check your files.")
+                return
+
             embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
             vectordb = FAISS.from_texts(splits, embeddings)
 
