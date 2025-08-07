@@ -14,10 +14,25 @@ from langchain.chains import RetrievalQA
 from langchain_openai import ChatOpenAI
 import streamlit as st
 import tiktoken
+import fitz  # PyMuPDF
 
 def pdf_to_img(pdf_file):
-    """Converts a PDF file to a list of PIL Images."""
-    return pdf2image.convert_from_path(pdf_file, poppler_path='/usr/bin')
+    """Converts a PDF file to a list of PIL Images using PyMuPDF."""
+    import io
+    from PIL import Image
+
+    images = []
+    # If pdf_file is a path, open it directly; if it's a file-like object, use bytes
+    if isinstance(pdf_file, str):
+        doc = fitz.open(pdf_file)
+    else:
+        doc = fitz.open(stream=pdf_file.read(), filetype="pdf")
+    for page in doc:
+        pix = page.get_pixmap()
+        img_bytes = pix.tobytes("png")
+        img = Image.open(io.BytesIO(img_bytes))
+        images.append(img)
+    return images
 
 
 def ocr_core(file):
@@ -95,7 +110,8 @@ def main():
                 with open(file_path, "wb") as f:
                      f.write(uploaded_file.getbuffer())
                 print("Processing file:", file_path)
-                pdf_text = extract_text_from_pdf(file_path)
+                uploaded_file.seek(0)
+                pdf_text = extract_text_from_pdf(uploaded_file)
                 all_pdf_text += pdf_text
                 st.success(f"Successfully extracted text from '{uploaded_file.name}'.")
             except Exception as e:
