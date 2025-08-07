@@ -1,6 +1,10 @@
+import shutil
 import os
+
+# Always clear EasyOCR cache before importing easyocr
+shutil.rmtree(os.path.expanduser("~/.easyocr"), ignore_errors=True)
+
 import openai
-import pdf2image
 try:
     from PIL import Image
 except ImportError:
@@ -15,12 +19,11 @@ from langchain_openai import ChatOpenAI
 import streamlit as st
 import tiktoken
 import fitz  # PyMuPDF
-import shutil
-import easyocr
 import numpy as np
+import easyocr
 
-reader = easyocr.Reader(['en', 'ch_sim', 'ms', 'ch_tra', 'ta'])
-
+# Only use English EasyOCR reader
+reader_en = easyocr.Reader(['en'])
 
 def pdf_to_img(pdf_file):
     """Converts a PDF file to a list of PIL Images using PyMuPDF."""
@@ -42,19 +45,17 @@ def pdf_to_img(pdf_file):
 
 
 
-def ocr_core(file):
-    """Performs OCR using Tesseract if available, otherwise EasyOCR."""
+def ocr_core(file, lang="en"):
+    img_array = np.array(file)
+    # Use Tesseract if available
     if shutil.which("tesseract") is not None:
         try:
             return pytesseract.image_to_string(file)
         except Exception as e:
             st.warning("Tesseract error, using EasyOCR instead.")
-            img_array = np.array(file)
-            return "\n".join(reader.readtext(img_array, detail=0))
-    else:
-        # Tesseract binary not found, use EasyOCR
-        img_array = np.array(file)
-        return "\n".join(reader.readtext(img_array, detail=0))
+            return "\n".join(reader_en.readtext(img_array, detail=0))
+    # Use EasyOCR if Tesseract is not available
+    return "\n".join(reader_en.readtext(img_array, detail=0))
 
 
 def ocr_space_image(image):
@@ -122,10 +123,7 @@ def main():
         all_pdf_text = ""
         for uploaded_file in uploaded_files:
             try:
-                file_path = os.path.abspath(uploaded_file.name)
-                with open(file_path, "wb") as f:
-                     f.write(uploaded_file.getbuffer())
-                print("Processing file:", file_path)
+                st.info(f"Processing file: {uploaded_file.name}")
                 uploaded_file.seek(0)
                 pdf_text = extract_text_from_pdf(uploaded_file)
                 all_pdf_text += pdf_text
