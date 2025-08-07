@@ -6,6 +6,7 @@ try:
 except ImportError:
     import Image
 import pytesseract
+import requests
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain.vectorstores import Chroma
@@ -20,8 +21,33 @@ def pdf_to_img(pdf_file):
 
 
 def ocr_core(file):
-    """Performs OCR on a single image and returns the extracted text."""
-    return pytesseract.image_to_string(file)
+    """Performs OCR on a single image and returns the extracted text using Tesseract or OCR API."""
+    # Try Tesseract first
+    try:
+        return pytesseract.image_to_string(file)
+    except Exception as e:
+        st.warning("Tesseract not available, using OCR API instead.")
+        return ocr_space_image(file)
+
+
+def ocr_space_image(image):
+    """Performs OCR using the OCR.Space API."""
+    api_key = st.secrets["OCR_API_KEY"]
+    url = 'https://api.ocr.space/parse/image'
+    # Convert PIL Image to bytes
+    import io
+    buffered = io.BytesIO()
+    image.save(buffered, format="PNG")
+    buffered.seek(0)
+    files = {'file': buffered}
+    data = {'isOverlayRequired': False, 'OCREngine': 2}
+    headers = {'apikey': api_key}
+    response = requests.post(url, files=files, data=data, headers=headers)
+    result = response.json()
+    try:
+        return result['ParsedResults'][0]['ParsedText']
+    except Exception:
+        return ""
 
 
 def extract_text_from_pdf(pdf_file):
