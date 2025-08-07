@@ -19,7 +19,7 @@ import shutil
 import easyocr
 import numpy as np
 
-reader = easyocr.Reader(['en'])
+reader = easyocr.Reader(['en', 'ch_sim', 'ms', 'ch_tra', 'ta'])
 
 
 def pdf_to_img(pdf_file):
