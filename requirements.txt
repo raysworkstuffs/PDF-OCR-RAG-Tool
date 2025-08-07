@@ -13,3 +13,5 @@ chromadb
 langchain-community
 poppler-utils
 pymupdf
+easyocr
+torch

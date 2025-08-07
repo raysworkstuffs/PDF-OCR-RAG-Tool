@@ -15,6 +15,11 @@ from langchain_openai import ChatOpenAI
 import streamlit as st
 import tiktoken
 import fitz  # PyMuPDF
+import shutil
+import easyocr
+import numpy as np
+
+reader = easyocr.Reader(['en'])
 
 
 def pdf_to_img(pdf_file):
@@ -38,13 +43,18 @@ def pdf_to_img(pdf_file):
 
 
 def ocr_core(file):
-    """Performs OCR on a single image and returns the extracted text using Tesseract or OCR API."""
-    # Try Tesseract first
-    try:
-        return pytesseract.image_to_string(file)
-    except Exception as e:
-        st.warning("Tesseract not available, using OCR API instead.")
-        return ocr_space_image(file)
+    """Performs OCR using Tesseract if available, otherwise EasyOCR."""
+    if shutil.which("tesseract") is not None:
+        try:
+            return pytesseract.image_to_string(file)
+        except Exception as e:
+            st.warning("Tesseract error, using EasyOCR instead.")
+            img_array = np.array(file)
+            return "\n".join(reader.readtext(img_array, detail=0))
+    else:
+        # Tesseract binary not found, use EasyOCR
+        img_array = np.array(file)
+        return "\n".join(reader.readtext(img_array, detail=0))
 
 
 def ocr_space_image(image):
@@ -69,11 +79,13 @@ def ocr_space_image(image):
 
 
 def extract_text_from_pdf(pdf_file):
-    """Extracts text from all pages of a PDF file."""
     images = pdf_to_img(pdf_file)
+    st.write(f"Extracted {len(images)} images from PDF.")
     extracted_text = ""
     for img in images:
-        extracted_text += ocr_core(img) + "\n\n"
+        text = ocr_core(img)
+        st.write(f"OCR result: {text[:100]}...")  # Show first 100 chars
+        extracted_text += text + "\n\n"
     return extracted_text
 
 
